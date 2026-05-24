@@ -11,23 +11,29 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        $admin = User::create([
-            'name'      => 'Tony Stark',
-            'email'     => 'admin@heroforce.com',
-            'password'  => Hash::make('password'),
-            'character' => 'Iron Man',
-            'role'      => 'admin',
-        ]);
+        // firstOrCreate → idempotente: não falha se rodado mais de uma vez
+        $admin = User::firstOrCreate(
+            ['email' => 'admin@heroforce.com'],
+            [
+                'name'      => 'Tony Stark',
+                'password'  => Hash::make('password'),
+                'character' => 'Iron Man',
+                'role'      => 'admin',
+            ]
+        );
 
         $heroes = [
-            ['name' => 'Peter Parker',   'email' => 'peter@heroforce.com',   'character' => 'Spider-Man',     'role' => 'hero'],
-            ['name' => 'Diana Prince',   'email' => 'diana@heroforce.com',   'character' => 'Wonder Woman',   'role' => 'hero'],
-            ['name' => 'Bruce Wayne',    'email' => 'bruce@heroforce.com',   'character' => 'Batman',         'role' => 'hero'],
-            ['name' => 'Steve Rogers',   'email' => 'steve@heroforce.com',   'character' => 'Captain America','role' => 'hero'],
+            ['name' => 'Peter Parker',   'email' => 'peter@heroforce.com',   'character' => 'Spider-Man',      'role' => 'hero'],
+            ['name' => 'Diana Prince',   'email' => 'diana@heroforce.com',   'character' => 'Wonder Woman',    'role' => 'hero'],
+            ['name' => 'Bruce Wayne',    'email' => 'bruce@heroforce.com',   'character' => 'Batman',          'role' => 'hero'],
+            ['name' => 'Steve Rogers',   'email' => 'steve@heroforce.com',   'character' => 'Captain America', 'role' => 'hero'],
         ];
 
         foreach ($heroes as $heroData) {
-            User::create(array_merge($heroData, ['password' => Hash::make('password')]));
+            User::firstOrCreate(
+                ['email' => $heroData['email']],
+                array_merge($heroData, ['password' => Hash::make('password')])
+            );
         }
 
         $users = User::pluck('id')->all();
@@ -96,7 +102,11 @@ class DatabaseSeeder extends Seeder
         ];
 
         foreach ($projects as $project) {
-            Project::create($project);
+            // firstOrCreate pelo nome: idempotente igual aos usuários
+            Project::firstOrCreate(
+                ['name' => $project['name']],
+                $project
+            );
         }
     }
 }

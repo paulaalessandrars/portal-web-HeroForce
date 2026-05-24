@@ -24,13 +24,35 @@ class UserFactory extends Factory
      */
     public function definition(): array
     {
-        return [
-            'name' => fake()->name(),
-            'email' => fake()->unique()->safeEmail(),
-            'email_verified_at' => now(),
-            'password' => static::$password ??= Hash::make('password'),
-            'remember_token' => Str::random(10),
+        $characters = [
+            'Iron Man', 'Spider-Man', 'Thor', 'Captain America', 'Black Widow',
+            'Hulk', 'Black Panther', 'Doctor Strange', 'Scarlet Witch', 'Deadpool',
+            'Batman', 'Superman', 'Wonder Woman', 'The Flash', 'Aquaman',
         ];
+
+        return [
+            'name'              => fake()->name(),
+            'email'             => fake()->unique()->safeEmail(),
+            'email_verified_at' => now(),
+            'password'          => static::$password ??= Hash::make('password'),
+            'remember_token'    => Str::random(10),
+            'character'         => fake()->randomElement($characters),
+            'role'              => 'hero',
+        ];
+    }
+
+    public function admin(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role' => 'admin',
+        ]);
+    }
+
+    public function hero(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role' => 'hero',
+        ]);
     }
 
     /**
