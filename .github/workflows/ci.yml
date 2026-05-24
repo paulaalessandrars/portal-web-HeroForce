@@ -1,0 +1,72 @@
+name: CI
+
+# Dispara em pushes para main/develop e em pull requests para main
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend-tests:
+    name: Backend Tests (PHP 8.2)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Configurar PHP 8.2
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, pdo, pdo_sqlite, sqlite3
+          coverage: none
+
+      - name: Cache das dependências do Composer
+        uses: actions/cache@v4
+        with:
+          path: backend/vendor
+          key: composer-${{ hashFiles('backend/composer.lock') }}
+          restore-keys: composer-
+
+      - name: Instalar dependências
+        working-directory: backend
+        run: composer install --prefer-dist --no-progress --no-interaction
+
+      - name: Criar .env de CI
+        working-directory: backend
+        run: cp .env.example .env
+
+      - name: Gerar chaves
+        working-directory: backend
+        run: |
+          php artisan key:generate
+          php artisan jwt:secret --force
+
+      - name: Executar testes
+        working-directory: backend
+        run: php artisan test --stop-on-failure
+
+  frontend-lint:
+    name: Frontend (Node 20)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Configurar Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Instalar dependências
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build de produção
+        working-directory: frontend
+        run: npm run build
