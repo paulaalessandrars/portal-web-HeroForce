@@ -4,7 +4,7 @@
 
 Sistema de gestão e vendas de projetos heroicos para a empresa fictícia **HeroForce**, onde heróis se cadastram, escolhem seu personagem e gerenciam missões com base em metas de **Agilidade, Encantamento, Eficiência, Excelência, Transparência e Ambição**.
 
-**Personagem do dev:** 🤖 Iron Man — tecnologia de ponta, inovação e autonomia.
+**Personagem do dev:** 🔮 Scarlet Witch — criatividade, poder e capacidade de reescrever a realidade.
 
 ---
 
@@ -18,6 +18,7 @@ Sistema de gestão e vendas de projetos heroicos para a empresa fictícia **Hero
 | Frontend  | Vue.js 3 + Vite + Pinia + Vue Router    |
 | Estilo    | Tailwind CSS 3                          |
 | Docker    | docker-compose (API + Frontend + DB)    |
+| CI        | GitHub Actions                          |
 
 ---
 
@@ -110,8 +111,9 @@ Base URL: `http://localhost:8000/api`
 
 | Método | Endpoint | Descrição | Auth |
 |--------|----------|-----------|------|
+| GET | `/health` | Status da API e banco | ❌ |
 | POST | `/auth/register` | Cadastro de herói | ❌ |
-| POST | `/auth/login` | Login | ❌ |
+| POST | `/auth/login` | Login (máx. 5 tentativas/min) | ❌ |
 | GET | `/auth/me` | Usuário autenticado | ✅ |
 | POST | `/auth/logout` | Logout | ✅ |
 | POST | `/auth/refresh` | Renovar token | ✅ |
@@ -119,7 +121,7 @@ Base URL: `http://localhost:8000/api`
 | POST | `/projects` | Criar projeto | ✅ Admin |
 | GET | `/projects/{id}` | Detalhe | ✅ |
 | PUT | `/projects/{id}` | Atualizar | ✅ Admin |
-| DELETE | `/projects/{id}` | Excluir | ✅ Admin |
+| DELETE | `/projects/{id}` | Excluir (soft delete) | ✅ Admin |
 | GET | `/users` | Listar heróis | ✅ |
 | GET | `/users/{id}` | Detalhe herói | ✅ |
 
@@ -127,10 +129,36 @@ Base URL: `http://localhost:8000/api`
 - `?status=pendente` | `em andamento` | `concluído`
 - `?user_id=1`
 
-### Documentação OpenAPI
-O arquivo de especificação está em `backend/storage/api-docs/api-docs.yaml`.
+---
 
-Para visualizar, importe no [Swagger Editor](https://editor.swagger.io/) ou use a extensão **REST Client** do VS Code.
+## Testes automatizados
+
+```bash
+cd backend
+php artisan test
+```
+
+Os testes cobrem:
+- **AuthTest** — registro (campos obrigatórios, e-mail duplicado, senhas divergentes), login (credenciais inválidas), rota `/me`, logout
+- **ProjectTest** — listagem com e sem filtros, criação/edição/exclusão por admin, bloqueio de heróis em operações restritas, relacionamento com usuário, soft delete, 404 para projetos inexistentes
+
+> Os testes rodam com SQLite em memória (configurado no `phpunit.xml`) — nenhuma configuração extra necessária.
+
+---
+
+## Documentação OpenAPI (Swagger UI)
+
+Com o backend rodando, acesse:
+
+```
+http://localhost:8000/api-docs/
+```
+
+O Swagger UI está integrado ao projeto — é possível visualizar e testar todos os endpoints diretamente pelo navegador, incluindo autenticação via token JWT.
+
+> **Como usar:** chame `POST /auth/login` para obter o token → clique em **Authorize** → cole o token → todos os endpoints protegidos ficam disponíveis.
+
+O arquivo de especificação também está disponível em `backend/public/api-docs/openapi.yaml`.
 
 ---
 
@@ -138,32 +166,49 @@ Para visualizar, importe no [Swagger Editor](https://editor.swagger.io/) ou use 
 
 ```
 portal-web-HeroForce/
+├── .github/
+│   └── workflows/
+│       └── ci.yml             # CI: testes + build em todo push
 ├── backend/               # Laravel API
 │   ├── app/
-│   │   ├── Http/Controllers/Api/
-│   │   │   ├── AuthController.php
-│   │   │   ├── ProjectController.php
-│   │   │   └── UserController.php
-│   │   └── Models/
-│   │       ├── User.php
-│   │       └── Project.php
+│   │   ├── Http/
+│   │   │   ├── Controllers/Api/
+│   │   │   │   ├── AuthController.php
+│   │   │   │   ├── ProjectController.php
+│   │   │   │   └── UserController.php
+│   │   │   ├── Requests/
+│   │   │   │   ├── StoreProjectRequest.php
+│   │   │   │   └── UpdateProjectRequest.php
+│   │   │   └── Resources/
+│   │   │       ├── ProjectResource.php
+│   │   │       └── UserResource.php
+│   │   ├── Models/
+│   │   │   ├── User.php
+│   │   │   └── Project.php    # SoftDeletes habilitado
+│   │   ├── Policies/
+│   │   │   └── ProjectPolicy.php  # Autorização centralizada
+│   │   └── Services/
+│   │       └── ProjectService.php # Lógica de negócio + cache + logging
 │   ├── database/
 │   │   ├── migrations/
 │   │   └── seeders/
 │   ├── routes/api.php
-│   ├── storage/api-docs/api-docs.yaml
 │   └── Dockerfile
 ├── frontend/              # Vue.js SPA
 │   ├── src/
 │   │   ├── api/axios.js
 │   │   ├── stores/auth.js
 │   │   ├── router/index.js
+│   │   ├── constants/characters.js   # Fonte única de verdade dos personagens
+│   │   ├── composables/
+│   │   │   └── useGoalColor.js       # Lógica de cor das metas reutilizável
 │   │   ├── views/
 │   │   │   ├── LoginView.vue
 │   │   │   ├── RegisterView.vue
 │   │   │   ├── DashboardView.vue
 │   │   │   └── ProjectFormView.vue
 │   │   └── components/
+│   │       ├── HeroAvatar.vue    # Avatares reais dos personagens
 │   │       ├── NavBar.vue
 │   │       └── ProjectCard.vue
 │   └── Dockerfile
@@ -212,3 +257,4 @@ portal-web-HeroForce/
 | goal_excellence | int 0-100 | Meta: Excelência |
 | goal_transparency | int 0-100 | Meta: Transparência |
 | goal_ambition | int 0-100 | Meta: Ambição |
+| deleted_at | timestamp | Soft delete — registro nunca é apagado fisicamente |
