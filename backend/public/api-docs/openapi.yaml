@@ -1,0 +1,294 @@
+openapi: 3.0.3
+info:
+  title: HeroForce API
+  description: |
+    API REST do portal HeroForce — sistema de gestão de projetos heroicos.
+
+    **Credenciais de demonstração:**
+    - Admin: `admin@heroforce.com` / `password`
+    - Herói: `peter@heroforce.com` / `password`
+  version: 1.0.0
+  contact:
+    name: HeroForce Team
+
+servers:
+  - url: http://localhost:8000/api
+    description: Desenvolvimento local
+
+tags:
+  - name: Auth
+    description: Autenticação e gerenciamento de sessão
+  - name: Projects
+    description: CRUD de projetos heroicos
+  - name: Users
+    description: Listagem de heróis
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id:         { type: integer }
+        name:       { type: string, example: "Tony Stark" }
+        email:      { type: string, example: "tony@heroforce.com" }
+        character:  { type: string, example: "Iron Man" }
+        role:       { type: string, enum: [admin, hero] }
+        created_at: { type: string, format: date-time }
+
+    Project:
+      type: object
+      properties:
+        id:                 { type: integer }
+        name:               { type: string, example: "Operação Escudo de Ferro" }
+        description:        { type: string, nullable: true }
+        status:             { type: string, enum: [pendente, "em andamento", concluído] }
+        user_id:            { type: integer }
+        goal_agility:       { type: integer, minimum: 0, maximum: 100 }
+        goal_enchantment:   { type: integer, minimum: 0, maximum: 100 }
+        goal_efficiency:    { type: integer, minimum: 0, maximum: 100 }
+        goal_excellence:    { type: integer, minimum: 0, maximum: 100 }
+        goal_transparency:  { type: integer, minimum: 0, maximum: 100 }
+        goal_ambition:      { type: integer, minimum: 0, maximum: 100 }
+        user:               { $ref: '#/components/schemas/User' }
+        created_at:         { type: string, format: date-time }
+        updated_at:         { type: string, format: date-time }
+
+    AuthResponse:
+      type: object
+      properties:
+        access_token: { type: string }
+        token_type:   { type: string, example: "bearer" }
+        expires_in:   { type: integer, example: 3600 }
+        user:         { $ref: '#/components/schemas/User' }
+
+paths:
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Cadastrar novo herói
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, character, password, password_confirmation]
+              properties:
+                name:                  { type: string, example: "Peter Parker" }
+                email:                 { type: string, example: "peter@heroforce.com" }
+                character:             { type: string, example: "Spider-Man" }
+                password:              { type: string, minLength: 8, example: "password" }
+                password_confirmation: { type: string, example: "password" }
+      responses:
+        '201':
+          description: Herói cadastrado com sucesso
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthResponse' }
+        '422':
+          description: Dados inválidos
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Fazer login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:    { type: string, example: "admin@heroforce.com" }
+                password: { type: string, example: "password" }
+      responses:
+        '200':
+          description: Login realizado com sucesso
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthResponse' }
+        '401':
+          description: Credenciais inválidas
+
+  /auth/me:
+    get:
+      tags: [Auth]
+      summary: Retorna o usuário autenticado
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: Dados do usuário
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Fazer logout
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: Logout realizado
+
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Renovar token JWT
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: Token renovado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthResponse' }
+
+  /projects:
+    get:
+      tags: [Projects]
+      summary: Listar projetos
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string, enum: [pendente, "em andamento", concluído] }
+        - name: user_id
+          in: query
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Lista de projetos
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Project' }
+
+    post:
+      tags: [Projects]
+      summary: Criar projeto (apenas admin)
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, status, user_id]
+              properties:
+                name:               { type: string }
+                description:        { type: string }
+                status:             { type: string, enum: [pendente, "em andamento", concluído] }
+                user_id:            { type: integer }
+                goal_agility:       { type: integer, minimum: 0, maximum: 100 }
+                goal_enchantment:   { type: integer, minimum: 0, maximum: 100 }
+                goal_efficiency:    { type: integer, minimum: 0, maximum: 100 }
+                goal_excellence:    { type: integer, minimum: 0, maximum: 100 }
+                goal_transparency:  { type: integer, minimum: 0, maximum: 100 }
+                goal_ambition:      { type: integer, minimum: 0, maximum: 100 }
+      responses:
+        '201':
+          description: Projeto criado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/Project' }
+        '403':
+          description: Apenas administradores
+
+  /projects/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: integer }
+
+    get:
+      tags: [Projects]
+      summary: Detalhe do projeto
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: Projeto encontrado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/Project' }
+
+    put:
+      tags: [Projects]
+      summary: Atualizar projeto (apenas admin)
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:               { type: string }
+                description:        { type: string }
+                status:             { type: string, enum: [pendente, "em andamento", concluído] }
+                user_id:            { type: integer }
+                goal_agility:       { type: integer, minimum: 0, maximum: 100 }
+                goal_enchantment:   { type: integer, minimum: 0, maximum: 100 }
+                goal_efficiency:    { type: integer, minimum: 0, maximum: 100 }
+                goal_excellence:    { type: integer, minimum: 0, maximum: 100 }
+                goal_transparency:  { type: integer, minimum: 0, maximum: 100 }
+                goal_ambition:      { type: integer, minimum: 0, maximum: 100 }
+      responses:
+        '200':
+          description: Projeto atualizado
+
+    delete:
+      tags: [Projects]
+      summary: Excluir projeto (apenas admin)
+      security: [{ BearerAuth: [] }]
+      responses:
+        '204':
+          description: Projeto excluído
+
+  /users:
+    get:
+      tags: [Users]
+      summary: Listar heróis
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: Lista de heróis
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/User' }
+
+  /users/{id}:
+    get:
+      tags: [Users]
+      summary: Detalhe de um herói
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Herói encontrado
