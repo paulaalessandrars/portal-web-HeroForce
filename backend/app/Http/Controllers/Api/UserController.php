@@ -3,19 +3,19 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\UserResource;
 use App\Models\User;
-use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class UserController extends Controller
 {
-    public function index(): JsonResponse
+    public function index(): AnonymousResourceCollection
     {
-        $users = User::select('id', 'name', 'email', 'character', 'role')->get();
-        return response()->json(['data' => $users]);
+        return UserResource::collection(User::all());
     }
 
-    public function show(User $user): JsonResponse
+    public function show(User $user): UserResource
     {
-        return response()->json(['data' => $user->only('id', 'name', 'email', 'character', 'role')]);
+        return new UserResource($user);
     }
 }
