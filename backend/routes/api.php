@@ -52,6 +52,8 @@ Route::prefix('auth')->group(function () {
 |--------------------------------------------------------------------------
 */
 Route::middleware('auth:api')->group(function () {
+    // Rota de status antes do apiResource para evitar conflito de wildcard
+    Route::patch('projects/{project}/status', [ProjectController::class, 'updateStatus']);
     Route::apiResource('projects', ProjectController::class);
     Route::apiResource('users', UserController::class)->only(['index', 'show']);
 });

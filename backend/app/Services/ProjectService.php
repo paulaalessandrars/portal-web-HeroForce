@@ -80,6 +80,27 @@ class ProjectService
     }
 
     /**
+     * Atualiza apenas o status de um projeto.
+     * Permitido a qualquer usuário autenticado (heróis podem marcar
+     * suas missões como concluídas, em andamento ou pendentes).
+     */
+    public function updateStatus(Project $project, string $status, User $performer): Project
+    {
+        $project->update(['status' => $status]);
+        $project->load('user');
+
+        $this->invalidateCache();
+
+        Log::info('project.status_updated', [
+            'project_id'   => $project->id,
+            'new_status'   => $status,
+            'performed_by' => $performer->id,
+        ]);
+
+        return $project;
+    }
+
+    /**
      * Soft-deleta um projeto, invalida o cache e registra o evento.
      */
     public function delete(Project $project, User $performer): void

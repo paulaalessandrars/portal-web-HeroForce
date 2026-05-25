@@ -1,5 +1,5 @@
 <template>
-  <div class="group relative card !p-0 overflow-hidden
+  <div class="group relative card !p-0 overflow-hidden cursor-pointer
               hover:border-white/20 hover:scale-[1.02] hover:shadow-glow-purple
               transition-all duration-300 flex flex-col">
 
@@ -54,7 +54,8 @@
 
     <!-- ── Ações (admin) ── -->
     <div v-if="isAdmin"
-         class="flex gap-2 px-6 py-4 bg-white/[0.02] border-t border-white/[0.06]">
+         class="flex gap-2 px-6 py-4 bg-white/[0.02] border-t border-white/[0.06]"
+         @click.stop>
       <router-link :to="`/projects/${project.id}/edit`"
                    class="btn-secondary text-sm flex-1 text-center !py-2">
         Editar

@@ -35,11 +35,6 @@
                 {{ t.icon }}
               </button>
             </div>
-            <!-- Nome do tema ativo -->
-            <span class="hidden md:block text-xs font-bold tracking-widest uppercase"
-                  style="color: var(--text-muted);">
-              {{ currentTheme?.label }}
-            </span>
           </div>
 
           <!-- Badge admin -->

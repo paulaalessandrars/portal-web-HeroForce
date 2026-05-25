@@ -131,6 +131,7 @@
           :key="project.id"
           :project="project"
           class="animate-slide-up"
+          @click="openDetail(project)"
           @delete="confirmDelete"
         />
       </div>
@@ -146,6 +147,16 @@
         </p>
       </div>
     </main>
+
+    <!-- ── Modal de detalhes do projeto ── -->
+    <ProjectDetailModal
+      v-if="detailModal.project"
+      :show="detailModal.show"
+      :project="detailModal.project"
+      @close="detailModal.show = false"
+      @delete="id => { detailModal.show = false; confirmDelete(id) }"
+      @status-updated="onStatusUpdated"
+    />
 
     <!-- ── Modal de confirmação de exclusão ── -->
     <Transition name="modal">
@@ -179,6 +190,7 @@
 import { ref, computed, onMounted } from 'vue'
 import NavBar from '@/components/NavBar.vue'
 import ProjectCard from '@/components/ProjectCard.vue'
+import ProjectDetailModal from '@/components/ProjectDetailModal.vue'
 import HeroAvatar from '@/components/HeroAvatar.vue'
 import SelectInput from '@/components/SelectInput.vue'
 import { useAuthStore } from '@/stores/auth'
@@ -191,6 +203,7 @@ const loading  = ref(true)
 const loadError = ref('')
 const filters  = ref({ search: '', status: '', user_id: '' })
 const deleteModal = ref({ show: false, id: null, loading: false, error: '' })
+const detailModal = ref({ show: false, project: null })
 
 // URL da imagem do personagem para o banner
 const CHARACTER_IMGS = {
@@ -276,6 +289,18 @@ const heroOptions = computed(() =>
 
 function clearFilters() {
   filters.value = { search: '', status: '', user_id: '' }
+}
+
+function openDetail(project) {
+  detailModal.value = { show: true, project }
+}
+
+function onStatusUpdated({ id, status }) {
+  const p = projects.value.find(x => x.id === id)
+  if (p) p.status = status
+  if (detailModal.value.project?.id === id) {
+    detailModal.value.project = { ...detailModal.value.project, status }
+  }
 }
 
 function confirmDelete(id) {

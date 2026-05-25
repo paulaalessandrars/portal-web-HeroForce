@@ -64,6 +64,22 @@ class ProjectController extends Controller
         return new ProjectResource($project);
     }
 
+    public function updateStatus(Request $request, Project $project): ProjectResource
+    {
+        // Qualquer herói autenticado pode atualizar o status de uma missão
+        $request->validate([
+            'status' => ['required', 'in:pendente,em andamento,concluído'],
+        ]);
+
+        $project = $this->projectService->updateStatus(
+            $project,
+            $request->string('status')->value(),
+            $request->user()
+        );
+
+        return new ProjectResource($project);
+    }
+
     public function destroy(Request $request, Project $project): JsonResponse
     {
         // authorize() usa o AuthorizesRequests trait + ProjectPolicy::delete()
