@@ -19,22 +19,31 @@ class ProjectService
     private const CACHE_TTL = 300; // 5 minutos
 
     /**
-     * Retorna todos os projetos, com filtros opcionais aplicados em memória.
-     * O resultado completo (sem filtros) é mantido em cache para
-     * evitar consultas repetidas ao banco.
+     * Retorna projetos conforme o papel do usuário:
+     * - Admin → todos os projetos (resultado cacheado por 5 min)
+     * - Herói → somente os projetos atribuídos a ele (sem cache global)
      */
-    public function list(array $filters): Collection
+    public function list(array $filters, User $user): Collection
     {
-        $projects = Cache::remember(self::CACHE_KEY, self::CACHE_TTL, function () {
-            return Project::with('user')->latest()->get();
-        });
+        if ($user->role === 'admin') {
+            $projects = Cache::remember(self::CACHE_KEY, self::CACHE_TTL, function () {
+                return Project::with('user')->latest()->get();
+            });
+
+            // Filtro por herói só se aplica ao admin (herói sempre vê só os seus)
+            if ($userId = $filters['user_id'] ?? null) {
+                $projects = $projects->where('user_id', (int) $userId);
+            }
+        } else {
+            // Heróis enxergam apenas as próprias missões — sem cache global
+            $projects = Project::with('user')
+                ->where('user_id', $user->id)
+                ->latest()
+                ->get();
+        }
 
         if ($status = $filters['status'] ?? null) {
             $projects = $projects->where('status', $status);
-        }
-
-        if ($userId = $filters['user_id'] ?? null) {
-            $projects = $projects->where('user_id', (int) $userId);
         }
 
         return $projects->values();

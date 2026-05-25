@@ -26,7 +26,8 @@ class ProjectController extends Controller
     public function index(Request $request): AnonymousResourceCollection
     {
         $projects = $this->projectService->list(
-            $request->only(['status', 'user_id'])
+            $request->only(['status', 'user_id']),
+            $request->user()
         );
 
         return ProjectResource::collection($projects);
