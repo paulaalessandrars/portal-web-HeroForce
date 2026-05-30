@@ -85,7 +85,7 @@
               all-label="Todos"
             />
           </div>
-          <div class="sm:w-56">
+          <div v-if="auth.isAdmin" class="sm:w-56">
             <label class="label">Herói responsável</label>
             <SelectInput
               v-model="filters.user_id"
