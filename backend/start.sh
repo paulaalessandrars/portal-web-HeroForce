@@ -6,6 +6,10 @@ PORT=${PORT:-8000}
 echo "==> Configuring nginx on port $PORT..."
 sed -i "s/NGINX_PORT/${PORT}/g" /etc/nginx/sites-available/heroforce
 
+echo "==> Creating storage directories..."
+mkdir -p storage/framework/sessions storage/framework/views storage/framework/cache
+chmod -R 775 storage bootstrap/cache
+
 echo "==> Clearing config cache..."
 php artisan config:clear
 
