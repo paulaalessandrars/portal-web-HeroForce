@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
@@ -26,7 +27,7 @@ class AuthController extends Controller
             'email'     => $data['email'],
             'character' => $data['character'],
             'password'  => Hash::make($data['password']),
-            'role'      => 'hero',
+            'role'      => UserRole::Hero->value,
         ]);
 
         $token = JWTAuth::fromUser($user);

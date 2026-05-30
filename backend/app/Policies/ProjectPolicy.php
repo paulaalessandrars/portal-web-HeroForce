@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Enums\UserRole;
 use App\Models\Project;
 use App\Models\User;
 
@@ -12,27 +13,21 @@ use App\Models\User;
  */
 class ProjectPolicy
 {
-    /**
-     * Apenas administradores podem criar projetos.
-     */
+    /** Apenas administradores podem criar projetos. */
     public function create(User $user): bool
     {
-        return $user->role === 'admin';
+        return $user->role === UserRole::Admin->value;
     }
 
-    /**
-     * Apenas administradores podem editar projetos.
-     */
+    /** Apenas administradores podem editar projetos. */
     public function update(User $user, Project $project): bool
     {
-        return $user->role === 'admin';
+        return $user->role === UserRole::Admin->value;
     }
 
-    /**
-     * Apenas administradores podem excluir projetos.
-     */
+    /** Apenas administradores podem excluir projetos. */
     public function delete(User $user, Project $project): bool
     {
-        return $user->role === 'admin';
+        return $user->role === UserRole::Admin->value;
     }
 }
