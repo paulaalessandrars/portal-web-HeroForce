@@ -1,6 +1,11 @@
 #!/bin/sh
 set -e
 
+PORT=${PORT:-8000}
+
+echo "==> Configuring nginx on port $PORT..."
+sed -i "s/NGINX_PORT/${PORT}/g" /etc/nginx/sites-available/heroforce
+
 echo "==> Clearing config cache..."
 php artisan config:clear
 
@@ -10,5 +15,10 @@ php artisan migrate --force
 echo "==> Seeding demo data..."
 php artisan db:seed --force
 
-echo "==> Starting server on port ${PORT:-8000}..."
-php artisan serve --host=0.0.0.0 --port=${PORT:-8000}
+echo "==> Caching config and routes for production..."
+php artisan config:cache
+php artisan route:cache
+# view:cache omitido — API pura sem templates Blade
+
+echo "==> Starting nginx + php-fpm via supervisor..."
+exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
