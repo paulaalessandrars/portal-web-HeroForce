@@ -14,7 +14,6 @@ backend/storage/framework/
 backend/storage/logs/
 
 # IDE / Editor
-.claude/
 .vscode/
 .idea/
 

@@ -119,27 +119,33 @@ docker-compose up --build
 
 ## Endpoints da API
 
-Base URL: `http://localhost:8000/api`
+| URL Base | Uso |
+|----------|-----|
+| `http://localhost:8000/api` | Infraestrutura (health check) |
+| `http://localhost:8000/api/v1` | Todos os endpoints de negócio |
 
 | Método | Endpoint | Descrição | Auth |
 |--------|----------|-----------|------|
-| GET | `/health` | Status da API e banco | ❌ |
-| POST | `/auth/register` | Cadastro de herói | ❌ |
-| POST | `/auth/login` | Login (máx. 5 tentativas/min) | ❌ |
-| GET | `/auth/me` | Usuário autenticado | ✅ |
-| POST | `/auth/logout` | Logout | ✅ |
-| POST | `/auth/refresh` | Renovar token | ✅ |
-| GET | `/projects` | Listar projetos | ✅ |
-| POST | `/projects` | Criar projeto | ✅ Admin |
-| GET | `/projects/{id}` | Detalhe | ✅ |
-| PUT | `/projects/{id}` | Atualizar | ✅ Admin |
-| DELETE | `/projects/{id}` | Excluir (soft delete) | ✅ Admin |
-| GET | `/users` | Listar heróis | ✅ |
-| GET | `/users/{id}` | Detalhe herói | ✅ |
+| GET | `/api/health` | Status da API e banco | ❌ |
+| POST | `/api/v1/auth/register` | Cadastro de herói | ❌ |
+| POST | `/api/v1/auth/login` | Login (máx. 5 tentativas/min) | ❌ |
+| GET | `/api/v1/auth/me` | Usuário autenticado | ✅ |
+| POST | `/api/v1/auth/logout` | Logout | ✅ |
+| POST | `/api/v1/auth/refresh` | Renovar token JWT | ✅ |
+| GET | `/api/v1/projects` | Listar projetos (paginado) | ✅ |
+| POST | `/api/v1/projects` | Criar projeto | ✅ Admin |
+| GET | `/api/v1/projects/{id}` | Detalhe do projeto | ✅ |
+| PUT | `/api/v1/projects/{id}` | Atualizar projeto | ✅ Admin |
+| PATCH | `/api/v1/projects/{id}/status` | Atualizar status | ✅ |
+| DELETE | `/api/v1/projects/{id}` | Excluir (soft delete) | ✅ Admin |
+| GET | `/api/v1/users` | Listar heróis | ✅ |
+| GET | `/api/v1/users/{id}` | Detalhe do herói | ✅ |
 
-### Filtros disponíveis em `GET /projects`
+### Filtros disponíveis em `GET /api/v1/projects`
 - `?status=pendente` | `em andamento` | `concluído`
 - `?user_id=1`
+- `?search=nome` — busca por nome (case-insensitive)
+- `?per_page=12` — itens por página (padrão 12, máx. 50)
 
 ---
 
