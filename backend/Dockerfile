@@ -33,7 +33,8 @@ RUN ln -sf /etc/nginx/sites-available/heroforce /etc/nginx/sites-enabled/default
 
 COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
-RUN chmod +x start.sh \
+RUN mkdir -p storage/framework/sessions storage/framework/views storage/framework/cache storage/logs \
+    && chmod +x start.sh \
     && chown -R www-data:www-data storage bootstrap/cache
 
 EXPOSE ${PORT:-8000}
