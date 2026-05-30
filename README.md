@@ -13,8 +13,7 @@ Sistema de gestão e vendas de projetos heroicos para a empresa fictícia **Hero
 | Serviço  | URL |
 |----------|-----|
 | **Frontend** (Vercel) | [portal-web-hero-force.vercel.app](https://portal-web-hero-force.vercel.app) |
-| **Backend API** (Railway) | [portal-web-heroforce-production.up.railway.app](https://portal-web-heroforce-production.up.railway.app) |
-| **Swagger UI** | [portal-web-heroforce-production.up.railway.app/api-docs](https://portal-web-heroforce-production.up.railway.app/api-docs/) |
+| **Backend API + Swagger** (Railway) | [portal-web-heroforce-production.up.railway.app/api-docs](https://portal-web-heroforce-production.up.railway.app/api-docs/) |
 
 > Credenciais de demo disponíveis na tela de login.
 
