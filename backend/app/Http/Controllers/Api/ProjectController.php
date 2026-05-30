@@ -10,7 +10,7 @@ use App\Models\Project;
 use App\Services\ProjectService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Http\Resources\Json\ResourceCollection;
 
 /**
  * Responsável apenas por receber a requisição HTTP, delegar ao service
@@ -23,10 +23,10 @@ class ProjectController extends Controller
         private readonly ProjectService $projectService
     ) {}
 
-    public function index(Request $request): AnonymousResourceCollection
+    public function index(Request $request): ResourceCollection
     {
         $projects = $this->projectService->list(
-            $request->only(['status', 'user_id']),
+            $request->only(['status', 'user_id', 'search', 'per_page']),
             $request->user()
         );
 

@@ -2,8 +2,10 @@
 
 namespace App\Services;
 
+use App\Enums\UserRole;
 use App\Models\Project;
 use App\Models\User;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -19,34 +21,37 @@ class ProjectService
     private const CACHE_TTL = 300; // 5 minutos
 
     /**
-     * Retorna projetos conforme o papel do usuário:
-     * - Admin → todos os projetos (resultado cacheado por 5 min)
-     * - Herói → somente os projetos atribuídos a ele (sem cache global)
+     * Retorna projetos paginados conforme o papel do usuário:
+     * - Admin → todos os projetos com filtros opcionais
+     * - Herói → somente os projetos atribuídos a ele
+     *
+     * @return LengthAwarePaginator
      */
-    public function list(array $filters, User $user): Collection
+    public function list(array $filters, User $user): LengthAwarePaginator
     {
-        if ($user->role === 'admin') {
-            $projects = Cache::remember(self::CACHE_KEY, self::CACHE_TTL, function () {
-                return Project::with('user')->latest()->get();
-            });
+        $perPage = min((int) ($filters['per_page'] ?? 12), 50); // máx 50 por página
 
-            // Filtro por herói só se aplica ao admin (herói sempre vê só os seus)
+        $query = Project::with('user')->latest();
+
+        if ($user->role === UserRole::Admin->value) {
+            // Admin filtra por herói se quiser
             if ($userId = $filters['user_id'] ?? null) {
-                $projects = $projects->where('user_id', (int) $userId);
+                $query->where('user_id', (int) $userId);
             }
         } else {
-            // Heróis enxergam apenas as próprias missões — sem cache global
-            $projects = Project::with('user')
-                ->where('user_id', $user->id)
-                ->latest()
-                ->get();
+            // Herói só enxerga os próprios projetos
+            $query->where('user_id', $user->id);
         }
 
         if ($status = $filters['status'] ?? null) {
-            $projects = $projects->where('status', $status);
+            $query->where('status', $status);
         }
 
-        return $projects->values();
+        if ($search = $filters['search'] ?? null) {
+            $query->where('name', 'ilike', "%{$search}%");
+        }
+
+        return $query->paginate($perPage);
     }
 
     /**

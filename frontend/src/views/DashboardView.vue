@@ -102,7 +102,7 @@
 
       <!-- Contador de resultados -->
       <p class="text-gray-500 text-sm mb-4">
-        {{ totalProjects }} missão(ões) encontrada(s)
+        {{ pagination.total }} missão(ões) encontrada(s)
       </p>
 
       <!-- ── Erro ── -->
@@ -124,10 +124,10 @@
       </div>
 
       <!-- ── Grid de projetos ── -->
-      <div v-else-if="filteredProjects.length"
+      <div v-else-if="projects.length"
            class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         <ProjectCard
-          v-for="project in filteredProjects"
+          v-for="project in projects"
           :key="project.id"
           :project="project"
           class="animate-slide-up"
@@ -136,8 +136,35 @@
         />
       </div>
 
+      <!-- ── Paginação ── -->
+      <div v-if="showPagination" class="flex items-center justify-center gap-2 mt-8">
+        <button
+          @click="loadProjects(pagination.current_page - 1)"
+          :disabled="pagination.current_page === 1"
+          class="btn-secondary !px-4 !py-2 text-sm disabled:opacity-30"
+        >← Anterior</button>
+
+        <div class="flex gap-1">
+          <button
+            v-for="page in pagination.last_page"
+            :key="page"
+            @click="loadProjects(page)"
+            class="w-9 h-9 rounded-xl text-sm font-bold transition-all"
+            :class="page === pagination.current_page
+              ? 'bg-hero-600 text-white shadow-glow-purple'
+              : 'btn-secondary'"
+          >{{ page }}</button>
+        </div>
+
+        <button
+          @click="loadProjects(pagination.current_page + 1)"
+          :disabled="pagination.current_page === pagination.last_page"
+          class="btn-secondary !px-4 !py-2 text-sm disabled:opacity-30"
+        >Próxima →</button>
+      </div>
+
       <!-- ── Estado vazio ── -->
-      <div v-else class="card text-center py-20">
+      <div v-else-if="!loading && !loadError && !projects.length" class="card text-center py-20">
         <span class="text-7xl">🦸</span>
         <h3 class="text-2xl font-black text-white mt-5">Nenhuma missão encontrada</h3>
         <p class="text-gray-500 mt-2 max-w-sm mx-auto">
@@ -187,7 +214,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import NavBar from '@/components/NavBar.vue'
 import ProjectCard from '@/components/ProjectCard.vue'
 import ProjectDetailModal from '@/components/ProjectDetailModal.vue'
@@ -196,35 +223,29 @@ import SelectInput from '@/components/SelectInput.vue'
 import { useAuthStore } from '@/stores/auth'
 import api from '@/api/axios'
 
-const auth     = useAuthStore()
-const projects = ref([])
-const heroes   = ref([])
-const loading  = ref(true)
+const auth      = useAuthStore()
+const projects  = ref([])
+const heroes    = ref([])
+const loading   = ref(true)
 const loadError = ref('')
-const filters  = ref({ search: '', status: '', user_id: '' })
+const filters   = ref({ search: '', status: '', user_id: '' })
+const pagination = ref({ current_page: 1, last_page: 1, total: 0, per_page: 12 })
 const deleteModal = ref({ show: false, id: null, loading: false, error: '' })
 const detailModal = ref({ show: false, project: null })
 
-// URL da imagem do personagem para o banner
+// Debounce para a busca por texto
+let searchTimer = null
+
 const CHARACTER_IMGS = {
-  'Iron Man':        '346-iron-man',
-  'Spider-Man':      '620-spider-man',
-  'Thor':            '659-thor',
-  'Captain America': '149-captain-america',
-  'Black Widow':     '107-black-widow',
-  'Hulk':            '332-hulk',
-  'Black Panther':   '106-black-panther',
-  'Doctor Strange':  '226-doctor-strange',
-  'Scarlet Witch':   '579-scarlet-witch',
-  'Deadpool':        '213-deadpool',
-  'Batman':          '70-batman',
-  'Superman':        '644-superman',
-  'Wonder Woman':    '720-wonder-woman',
-  'The Flash':       '263-flash',
-  'Aquaman':         '38-aquaman',
-  'Green Lantern':   '306-hal-jordan',
-  'Cyborg':          '194-cyborg',
-  'Spawn':           '612-spawn',
+  'Iron Man':        '346-iron-man',      'Spider-Man':      '620-spider-man',
+  'Thor':            '659-thor',          'Captain America': '149-captain-america',
+  'Black Widow':     '107-black-widow',   'Hulk':            '332-hulk',
+  'Black Panther':   '106-black-panther', 'Doctor Strange':  '226-doctor-strange',
+  'Scarlet Witch':   '579-scarlet-witch', 'Deadpool':        '213-deadpool',
+  'Batman':          '70-batman',         'Superman':        '644-superman',
+  'Wonder Woman':    '720-wonder-woman',  'The Flash':       '263-flash',
+  'Aquaman':         '38-aquaman',        'Green Lantern':   '306-hal-jordan',
+  'Cyborg':          '194-cyborg',        'Spawn':           '612-spawn',
   'Hellboy':         '322-hellboy',
 }
 
@@ -234,58 +255,42 @@ const characterImgUrl = computed(() => {
   return slug ? `${BASE}${slug}.jpg` : ''
 })
 
-const filteredProjects = computed(() => {
-  return projects.value.filter(p => {
-    const matchSearch = !filters.value.search ||
-      p.name.toLowerCase().includes(filters.value.search.toLowerCase())
-    const matchStatus = !filters.value.status || p.status === filters.value.status
-    const matchUser   = !filters.value.user_id || p.user_id === Number(filters.value.user_id)
-    return matchSearch && matchStatus && matchUser
-  })
+// Filtros server-side — recarrega do zero na página 1
+watch(() => [filters.value.status, filters.value.user_id], () => {
+  loadProjects(1)
 })
 
-const totalProjects = computed(() => filteredProjects.value.length)
+// Busca com debounce de 400ms
+watch(() => filters.value.search, () => {
+  clearTimeout(searchTimer)
+  searchTimer = setTimeout(() => loadProjects(1), 400)
+})
 
 const stats = computed(() => [
-  {
-    label:  'Total',
-    value:  projects.value.length,
-    color:  'text-white',
-    icon:   '⚡',
-    iconBg: 'bg-hero-600/20',
-  },
-  {
-    label:  'Pendentes',
-    value:  projects.value.filter(p => p.status === 'pendente').length,
-    color:  'text-amber-400',
-    icon:   '⏳',
-    iconBg: 'bg-amber-500/10',
-  },
-  {
-    label:  'Em andamento',
-    value:  projects.value.filter(p => p.status === 'em andamento').length,
-    color:  'text-sky-400',
-    icon:   '🔄',
-    iconBg: 'bg-sky-500/10',
-  },
-  {
-    label:  'Concluídos',
-    value:  projects.value.filter(p => p.status === 'concluído').length,
-    color:  'text-emerald-400',
-    icon:   '✅',
-    iconBg: 'bg-emerald-500/10',
-  },
+  { label: 'Total',        value: pagination.value.total,
+    color: 'text-white',   icon: '⚡', iconBg: 'bg-hero-600/20' },
+  { label: 'Pendentes',
+    value: projects.value.filter(p => p.status === 'pendente').length,
+    color: 'text-amber-400', icon: '⏳', iconBg: 'bg-amber-500/10' },
+  { label: 'Em andamento',
+    value: projects.value.filter(p => p.status === 'em andamento').length,
+    color: 'text-sky-400', icon: '🔄', iconBg: 'bg-sky-500/10' },
+  { label: 'Concluídos',
+    value: projects.value.filter(p => p.status === 'concluído').length,
+    color: 'text-emerald-400', icon: '✅', iconBg: 'bg-emerald-500/10' },
 ])
 
 const statusOptions = [
-  { value: 'pendente',     label: '⏳ Pendente'      },
-  { value: 'em andamento', label: '🔄 Em andamento'  },
-  { value: 'concluído',    label: '✅ Concluído'      },
+  { value: 'pendente',     label: '⏳ Pendente'     },
+  { value: 'em andamento', label: '🔄 Em andamento' },
+  { value: 'concluído',    label: '✅ Concluído'     },
 ]
 
 const heroOptions = computed(() =>
   heroes.value.map(u => ({ value: u.id, label: `${u.name} — ${u.character}` }))
 )
+
+const showPagination = computed(() => pagination.value.last_page > 1)
 
 function clearFilters() {
   filters.value = { search: '', status: '', user_id: '' }
@@ -298,13 +303,39 @@ function openDetail(project) {
 function onStatusUpdated({ id, status }) {
   const p = projects.value.find(x => x.id === id)
   if (p) p.status = status
-  if (detailModal.value.project?.id === id) {
+  if (detailModal.value.project?.id === id)
     detailModal.value.project = { ...detailModal.value.project, status }
-  }
 }
 
 function confirmDelete(id) {
   deleteModal.value = { show: true, id, loading: false, error: '' }
+}
+
+async function loadProjects(page = 1) {
+  loading.value = true
+  loadError.value = ''
+  try {
+    const params = {
+      page,
+      per_page: pagination.value.per_page,
+      ...(filters.value.search  && { search:  filters.value.search  }),
+      ...(filters.value.status  && { status:  filters.value.status  }),
+      ...(filters.value.user_id && { user_id: filters.value.user_id }),
+    }
+    const res = await api.get('/projects', { params })
+    projects.value  = res.data.data || res.data
+    const meta      = res.data.meta || {}
+    pagination.value = {
+      current_page: meta.current_page ?? 1,
+      last_page:    meta.last_page    ?? 1,
+      total:        meta.total        ?? projects.value.length,
+      per_page:     meta.per_page     ?? 12,
+    }
+  } catch {
+    loadError.value = 'Não foi possível carregar os projetos. Tente recarregar a página.'
+  } finally {
+    loading.value = false
+  }
 }
 
 async function deleteProject() {
@@ -312,8 +343,8 @@ async function deleteProject() {
   deleteModal.value.error   = ''
   try {
     await api.delete(`/projects/${deleteModal.value.id}`)
-    projects.value = projects.value.filter(p => p.id !== deleteModal.value.id)
     deleteModal.value.show = false
+    await loadProjects(pagination.value.current_page)
   } catch (e) {
     deleteModal.value.error = e.response?.data?.message || 'Erro ao excluir. Tente novamente.'
   } finally {
@@ -322,18 +353,12 @@ async function deleteProject() {
 }
 
 onMounted(async () => {
-  try {
-    const [projRes, userRes] = await Promise.all([
-      api.get('/projects'),
-      api.get('/users'),
-    ])
-    projects.value = projRes.data.data || projRes.data
-    heroes.value   = userRes.data.data || userRes.data
-  } catch (e) {
-    loadError.value = 'Não foi possível carregar os projetos. Tente recarregar a página.'
-  } finally {
-    loading.value = false
-  }
+  const [, userRes] = await Promise.allSettled([
+    loadProjects(1),
+    api.get('/users'),
+  ])
+  if (userRes.status === 'fulfilled')
+    heroes.value = userRes.value.data.data || userRes.value.data
 })
 </script>
 
