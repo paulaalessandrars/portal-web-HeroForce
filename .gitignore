@@ -13,8 +13,10 @@ backend/bootstrap/cache/*.php
 backend/storage/framework/
 backend/storage/logs/
 
-# Claude Code
-.claude/settings.local.json
+# IDE / Editor
+.claude/
+.vscode/
+.idea/
 
 # OS
 .DS_Store

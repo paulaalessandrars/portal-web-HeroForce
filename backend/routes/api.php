@@ -8,10 +8,8 @@ use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
-| Health Check
+| Health Check — sem versionamento (endpoint de infraestrutura)
 |--------------------------------------------------------------------------
-| Endpoint público para verificar se a API e o banco estão operacionais.
-| Útil para orquestradores (Docker, Kubernetes) e monitoramento.
 */
 Route::get('/health', function () {
     try {
@@ -25,35 +23,45 @@ Route::get('/health', function () {
         'status'    => $db === 'connected' ? 'ok' : 'degraded',
         'database'  => $db,
         'timestamp' => now()->toIso8601String(),
+        'version'   => 'v1',
     ]);
 });
 
 /*
 |--------------------------------------------------------------------------
-| Autenticação
+| API v1
 |--------------------------------------------------------------------------
-| throttle:5,1 no login = máximo 5 tentativas por minuto por IP.
-| Protege contra ataques de força bruta.
+| Todas as rotas de negócio são versionadas em /v1.
+| Isso permite lançar /v2 no futuro sem quebrar clientes existentes.
 */
-Route::prefix('auth')->group(function () {
-    Route::post('register', [AuthController::class, 'register']);
-    Route::post('login',    [AuthController::class, 'login'])->middleware('throttle:5,1');
+Route::prefix('v1')->group(function () {
 
-    Route::middleware('auth:api')->group(function () {
-        Route::post('logout',  [AuthController::class, 'logout']);
-        Route::post('refresh', [AuthController::class, 'refresh']);
-        Route::get('me',       [AuthController::class, 'me']);
+    /*
+    |----------------------------------------------------------------------
+    | Autenticação
+    |----------------------------------------------------------------------
+    | throttle:5,1 no login = máximo 5 tentativas por minuto por IP.
+    */
+    Route::prefix('auth')->group(function () {
+        Route::post('register', [AuthController::class, 'register']);
+        Route::post('login',    [AuthController::class, 'login'])->middleware('throttle:5,1');
+
+        Route::middleware('auth:api')->group(function () {
+            Route::post('logout',  [AuthController::class, 'logout']);
+            Route::post('refresh', [AuthController::class, 'refresh']);
+            Route::get('me',       [AuthController::class, 'me']);
+        });
     });
-});
 
-/*
-|--------------------------------------------------------------------------
-| Recursos protegidos
-|--------------------------------------------------------------------------
-*/
-Route::middleware('auth:api')->group(function () {
-    // Rota de status antes do apiResource para evitar conflito de wildcard
-    Route::patch('projects/{project}/status', [ProjectController::class, 'updateStatus']);
-    Route::apiResource('projects', ProjectController::class);
-    Route::apiResource('users', UserController::class)->only(['index', 'show']);
+    /*
+    |----------------------------------------------------------------------
+    | Recursos protegidos
+    |----------------------------------------------------------------------
+    */
+    Route::middleware('auth:api')->group(function () {
+        // Status antes do apiResource para evitar conflito de wildcard
+        Route::patch('projects/{project}/status', [ProjectController::class, 'updateStatus']);
+        Route::apiResource('projects', ProjectController::class);
+        Route::apiResource('users', UserController::class)->only(['index', 'show']);
+    });
 });
