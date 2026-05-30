@@ -48,7 +48,7 @@ class ProjectService
         }
 
         if ($search = $filters['search'] ?? null) {
-            $query->where('name', 'ilike', "%{$search}%");
+            $query->whereRaw('LOWER(name) LIKE ?', ['%' . strtolower($search) . '%']);
         }
 
         return $query->paginate($perPage);
